@@ -36,63 +36,70 @@
     <pre id="dkp_weights" style="color:blueviolet; font-weight: bold;"></pre>
 
     <script type="text/javascript">
-      let users = ["Lerion", "Twig", "Radji", "Wixo"];
-
       let fetchData = () => {
         fetch(
-          "https://kbf0hkyvyg.execute-api.eu-central-1.amazonaws.com/dev/hgdata"
+          'https://kbf0hkyvyg.execute-api.eu-central-1.amazonaws.com/dev/hgdata'
         )
           .then(response => response.json())
           .then(data => {
-            users.forEach(user => {
-              const id = Object.keys(data.users)
-                .map(key => data.users[key])
-                .find(_user => user === _user.name).id;
-              const minor = data.dkp.minor.find(m => m.user_id == id);
-              const major = data.dkp.major.find(m => m.user_id == id);
+            Object.keys(data.users)
+              .map(key => data.users[key])
+              .forEach(user => {
+                const minor = data.dkp.minor.find(
+                  m => m.user_id == user.id
+                ) || {
+                  activity: '',
+                  attendance: ''
+                };
+                const major = data.dkp.major.find(
+                  m => m.user_id == user.id
+                ) || {
+                  activity: '',
+                  attendance: ''
+                };
 
-              const newRow = document.getElementById("users").insertRow();
+                const newRow = document.getElementById('users').insertRow();
 
-              newRow.insertCell().appendChild(document.createTextNode(user));
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(major.activity));
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(major.attendance));
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(major.loot));
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(minor.loot));
-              newRow
-                .insertCell()
-                .appendChild(
-                  document.createTextNode(
-                    new Date(major.last_loot).toDateString()
-                  )
-                );
-              newRow
-                .insertCell()
-                .appendChild(
-                  document.createTextNode(
-                    new Date(minor.last_loot).toDateString()
-                  )
-                );
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(major.kills_since_loot));
-              newRow
-                .insertCell()
-                .appendChild(document.createTextNode(minor.kills_since_loot));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(user.name));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(major.activity));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(major.attendance));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(major.loot));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(minor.loot));
+                newRow
+                  .insertCell()
+                  .appendChild(
+                    document.createTextNode(
+                      new Date(major.last_loot).toDateString()
+                    )
+                  );
+                newRow
+                  .insertCell()
+                  .appendChild(
+                    document.createTextNode(
+                      new Date(minor.last_loot).toDateString()
+                    )
+                  );
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(major.kills_since_loot));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(minor.kills_since_loot));
 
-              document.getElementById("dkp_weights").innerHTML = JSON.stringify(
-                data.dkp_weights,
-                undefined,
-                2
-              );
-            });
+                document.getElementById(
+                  'dkp_weights'
+                ).innerHTML = JSON.stringify(data.dkp_weights, undefined, 2);
+              });
           });
       };
 
