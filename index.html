@@ -35,6 +35,9 @@
     <h1 style="color:blueviolet;">DKP Weights</h1>
     <pre id="dkp_weights" style="color:blueviolet; font-weight: bold;"></pre>
 
+    <h1>Requests</h1>
+    <div id="requests" />
+
     <script type="text/javascript">
       let fetchData = () => {
         fetch(
@@ -42,6 +45,39 @@
         )
           .then(response => response.json())
           .then(data => {
+            const items = Object.keys(data.items).map(key => data.items[key]);
+            const users = Object.keys(data.users).map(key => data.users[key]);
+
+            Object.keys(data.requests.item)
+              .map(key => data.requests.item[key])
+              .forEach(requests => {
+                const itemId = Object.keys(requests).map(
+                  key => requests[key]
+                )[0].item_id;
+                const userRequests = Object.keys(requests)
+                  .map(key => requests[key])
+                  .map(userRequest => {
+                    const user = users.find(u => u.id === userRequest.user_id);
+                    return user.name.concat(
+                      ' (' + userRequest.request_type + ')'
+                    );
+                  })
+                  .join(', ');
+                var itemName = document.createTextNode(
+                  items.find(_item => _item.id === itemId).name
+                );
+
+                var div = document.createElement('div');
+                var h3 = document.createElement('h3');
+                var p = document.createElement('p');
+
+                p.appendChild(document.createTextNode(userRequests));
+                h3.appendChild(itemName);
+                div.appendChild(h3);
+                div.appendChild(p);
+                document.getElementById('requests').appendChild(div);
+              });
+
             Object.keys(data.users)
               .map(key => data.users[key])
               .forEach(user => {
