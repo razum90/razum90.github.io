@@ -61,11 +61,19 @@
                 )[0].item_id;
                 const userRequests = Object.keys(requests)
                   .map(key => requests[key])
+                  .filter(
+                    userRequest =>
+                      users.find(u => u.id === userRequest.user_id).rank !==
+                      "none"
+                  )
                   .map(userRequest => {
                     const user = users.find(u => u.id === userRequest.user_id);
-                    return user.name.concat(
-                      " (" + userRequest.request_type + ")"
+                    const dkp = data.dkp[userRequest.request_type].find(
+                      dkps => dkps.user_id === userRequest.user_id
                     );
+                    return user.name
+                      .concat(" (" + userRequest.request_type + ")")
+                      .concat(dkp ? " dkp: " + dkp.dkp : "");
                   })
                   .join(", ");
                 var itemName = document.createTextNode(
@@ -86,19 +94,14 @@
             Object.keys(data.users)
               .map(key => data.users[key])
               .filter(user => user.rank !== "none")
+              .sort((a, b) => {
+                return (
+                  getMajorDkp(data, b.id).dkp - getMajorDkp(data, a.id).dkp
+                );
+              })
               .forEach(user => {
-                const minor = data.dkp.minor.find(
-                  m => m.user_id == user.id
-                ) || {
-                  activity: "",
-                  attendance: ""
-                };
-                const major = data.dkp.major.find(
-                  m => m.user_id == user.id
-                ) || {
-                  activity: "",
-                  attendance: ""
-                };
+                const minor = getMinorDkp(data, user.id);
+                const major = getMajorDkp(data, user.id);
 
                 const newRow = document.getElementById("users").insertRow();
 
@@ -149,6 +152,24 @@
                 ).innerHTML = JSON.stringify(data.dkp_weights, undefined, 2);
               });
           });
+      };
+
+      const getMinorDkp = (data, userId) => {
+        return (
+          data.dkp.minor.find(m => m.user_id == userId) || {
+            activity: "",
+            attendance: ""
+          }
+        );
+      };
+
+      const getMajorDkp = (data, userId) => {
+        return (
+          data.dkp.major.find(m => m.user_id == userId) || {
+            activity: "",
+            attendance: ""
+          }
+        );
       };
 
       const calculateDKP = (array, data) => {
