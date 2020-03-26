@@ -19,6 +19,8 @@
       <thead>
         <tr>
           <th>Name</th>
+          <th>Major DKP</th>
+          <th>Minor DKP</th>
           <th>Activity</th>
           <th>Attendance</th>
           <th>Majors looted</th>
@@ -41,12 +43,15 @@
     <script type="text/javascript">
       let fetchData = () => {
         fetch(
-          'https://kbf0hkyvyg.execute-api.eu-central-1.amazonaws.com/dev/hgdata'
+          "https://kbf0hkyvyg.execute-api.eu-central-1.amazonaws.com/dev/hgdata"
         )
           .then(response => response.json())
           .then(data => {
             const items = Object.keys(data.items).map(key => data.items[key]);
             const users = Object.keys(data.users).map(key => data.users[key]);
+
+            calculateDKP(data.dkp.minor, data);
+            calculateDKP(data.dkp.major, data);
 
             Object.keys(data.requests.item)
               .map(key => data.requests.item[key])
@@ -59,46 +64,53 @@
                   .map(userRequest => {
                     const user = users.find(u => u.id === userRequest.user_id);
                     return user.name.concat(
-                      ' (' + userRequest.request_type + ')'
+                      " (" + userRequest.request_type + ")"
                     );
                   })
-                  .join(', ');
+                  .join(", ");
                 var itemName = document.createTextNode(
                   items.find(_item => _item.id === itemId).name
                 );
 
-                var div = document.createElement('div');
-                var h3 = document.createElement('h3');
-                var p = document.createElement('p');
+                var div = document.createElement("div");
+                var h3 = document.createElement("h3");
+                var p = document.createElement("p");
 
                 p.appendChild(document.createTextNode(userRequests));
                 h3.appendChild(itemName);
                 div.appendChild(h3);
                 div.appendChild(p);
-                document.getElementById('requests').appendChild(div);
+                document.getElementById("requests").appendChild(div);
               });
 
             Object.keys(data.users)
               .map(key => data.users[key])
+              .filter(user => user.rank !== "none")
               .forEach(user => {
                 const minor = data.dkp.minor.find(
                   m => m.user_id == user.id
                 ) || {
-                  activity: '',
-                  attendance: ''
+                  activity: "",
+                  attendance: ""
                 };
                 const major = data.dkp.major.find(
                   m => m.user_id == user.id
                 ) || {
-                  activity: '',
-                  attendance: ''
+                  activity: "",
+                  attendance: ""
                 };
 
-                const newRow = document.getElementById('users').insertRow();
+                const newRow = document.getElementById("users").insertRow();
 
                 newRow
                   .insertCell()
                   .appendChild(document.createTextNode(user.name));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(major.dkp));
+                newRow
+                  .insertCell()
+                  .appendChild(document.createTextNode(minor.dkp));
                 newRow
                   .insertCell()
                   .appendChild(document.createTextNode(major.activity));
@@ -133,11 +145,47 @@
                   .appendChild(document.createTextNode(minor.kills_since_loot));
 
                 document.getElementById(
-                  'dkp_weights'
+                  "dkp_weights"
                 ).innerHTML = JSON.stringify(data.dkp_weights, undefined, 2);
               });
           });
       };
+
+      const calculateDKP = (array, data) => {
+        array.forEach(function(item, key) {
+          const ratioScore = Math.min(
+            calculateRatioScore(item.attendance, item.loot) *
+              data.dkp_weights.ratio_multiplier,
+            data.dkp_weights.ratio_cap
+          );
+          const raidScore = Math.min(
+            item.attendance * data.dkp_weights.total_raids_multiplier,
+            data.dkp_weights.total_raids_cap
+          );
+          const activityScore = Math.min(
+            item.activity * 100 * data.dkp_weights.activity_multiplier,
+            data.dkp_weights.activity_cap
+          );
+          const rslScore = Math.min(
+            item.kills_since_loot *
+              data.dkp_weights.raids_since_loot_multiplier,
+            data.dkp_weights.raids_since_loot_cap
+          );
+          item.dkp = (
+            raidScore +
+            ratioScore +
+            rslScore * activityScore
+          ).toFixed(2);
+        });
+      };
+
+      function calculateRatioScore(raids, loot) {
+        if (loot === 0) {
+          loot = 1;
+          raids *= 2;
+        }
+        return raids / loot;
+      }
 
       fetchData();
     </script>
