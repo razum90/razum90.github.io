@@ -1,21 +1,37 @@
 <!DOCTYPE html>
-
-<html>
+<html xmlns="http://www.w3.org/1999/html">
   <head>
     <title>Fjongdenger</title>
     <style>
       body {
-        background-color: powderblue;
-        font-size: 20px;
+        padding: 0 3rem;
       }
-      th,
-      td {
-        border: 1px solid black;
+      .lerion {
+        background-color: #a9d271 !important;
+      }
+      .twig {
+        background-color: #ff7d0a !important;
+      }
+      .warrior {
+        background-color: #c79c6e !important;
+      }
+      .wixo {
+        background-color: #8787ed !important;
+      }
+      .knifey {
+        background-color: #fff569 !important;
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
   </head>
   <body>
-    <table>
+    <h2>40 man</h2>
+    <table class="table table-striped">
       <thead>
         <tr>
           <th>Name</th>
@@ -31,149 +47,214 @@
           <th>Kills since last Minor</th>
         </tr>
       </thead>
-      <tbody id="users"></tbody>
+      <tbody id="users-40-man"></tbody>
     </table>
-
-    <h1 style="color:blueviolet;">DKP Weights</h1>
-    <pre id="dkp_weights" style="color:blueviolet; font-weight: bold;"></pre>
-
+    <h2>20 man</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Major DKP</th>
+          <th>Minor DKP</th>
+          <th>Activity</th>
+          <th>Attendance</th>
+          <th>Majors looted</th>
+          <th>Minors looted</th>
+          <th>Last Major</th>
+          <th>Last Minor</th>
+          <th>Kills since last Major</th>
+          <th>Kills since last Minor</th>
+        </tr>
+      </thead>
+      <tbody id="users-20-man"></tbody>
+    </table>
+    <h1 style="color: blueviolet;">DKP Weights</h1>
+    <pre id="dkp_weights" style="color: blueviolet; font-weight: bold;"></pre>
     <h1>Requests</h1>
     <div id="requests" />
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script type="text/javascript">
       let fetchData = () => {
-        fetch(
-          "https://kbf0hkyvyg.execute-api.eu-central-1.amazonaws.com/dev/hgdata"
-        )
-          .then(response => response.json())
-          .then(data => {
-            const items = Object.keys(data.items).map(key => data.items[key]);
-            const users = Object.keys(data.users).map(key => data.users[key]);
-
-            calculateDKP(data.dkp.minor, data);
-            calculateDKP(data.dkp.major, data);
-
-            Object.keys(data.requests.item)
-              .map(key => data.requests.item[key])
-              .forEach(requests => {
-                const itemId = Object.keys(requests).map(
-                  key => requests[key]
-                )[0].item_id;
-                const userRequests = Object.keys(requests)
-                  .map(key => requests[key])
-                  .filter(
-                    userRequest =>
-                      users.find(u => u.id === userRequest.user_id).rank !==
-                      "none"
-                  )
-                  .map(userRequest => {
-                    const user = users.find(u => u.id === userRequest.user_id);
-                    const dkp = data.dkp[userRequest.request_type].find(
-                      dkps => dkps.user_id === userRequest.user_id
+        fetch("https://api.higoat.se/hgdata")
+          .then((response) => response.json())
+          .then((data) => {
+            const modes = ["20", "40"];
+            const items = Object.keys(data.items).map((key) => data.items[key]);
+            const users = Object.keys(data.users).map((key) => data.users[key]);
+            modes.forEach((mode) => {
+              calculateDKP(data.dkp[mode].minor, data);
+              calculateDKP(data.dkp[mode].major, data);
+              Object.keys(data.requests.item)
+                .map((key) => data.requests.item[key])
+                .forEach((requests) => {
+                  const itemId = Object.keys(requests).map(
+                    (key) => requests[key]
+                  )[0].item_id;
+                  const userRequests = Object.keys(requests)
+                    .map((key) => requests[key])
+                    .filter(
+                      (userRequest) =>
+                        users.find((u) => u.id === userRequest.user_id).rank !==
+                        "none"
+                    )
+                    .sort((a, b) => {
+                      if (a.request_type === b.request_type) {
+                        return -1;
+                      } else if (
+                        (a.request_type === "major" &&
+                          b.request_type !== "major") ||
+                        (a.request_type === "minor" && b.request_type === "alt")
+                      ) {
+                        return 0;
+                      } else {
+                        return 1;
+                      }
+                    })
+                    .reverse()
+                    .map((userRequest) => {
+                      const user = users.find(
+                        (u) => u.id === userRequest.user_id
+                      );
+                      const dkp = data.dkp[mode][userRequest.request_type].find(
+                        (dkps) => dkps.user_id === userRequest.user_id
+                      );
+                      return user.name
+                        .concat(` (${mode}-man) `)
+                        .concat(" (" + userRequest.request_type + ")")
+                        .concat(dkp ? " dkp: " + dkp.dkp : "");
+                    });
+                  var itemName = document.createTextNode(
+                    items.find((_item) => _item.id === itemId).name
+                  );
+                  var div = document.createElement("div");
+                  var h3 = document.createElement("h3");
+                  var ul = document.createElement("ul");
+                  ul.className = "list-group";
+                  userRequests.forEach((request) => {
+                    var entry = document.createElement("li");
+                    entry.className = "list-group-item";
+                    entry.appendChild(document.createTextNode(request));
+                    ul.appendChild(entry);
+                  });
+                  h3.appendChild(itemName);
+                  div.appendChild(h3);
+                  div.appendChild(ul);
+                  document.getElementById("requests").appendChild(div);
+                });
+            });
+            modes.forEach((mode) => {
+              Object.keys(data.users)
+                .map((key) => data.users[key])
+                .filter((user) => user.rank !== "none")
+                .sort((a, b) => {
+                  return (
+                    getMajorDkp(data, b.id, mode).dkp -
+                    getMajorDkp(data, a.id, mode).dkp
+                  );
+                })
+                .forEach((user) => {
+                  const minor = getMinorDkp(data, user.id, mode);
+                  const major = getMajorDkp(data, user.id, mode);
+                  const newRow = document
+                    .getElementById(`users-${mode}-man`)
+                    .insertRow();
+                  newRow.className = "hejt";
+                  switch (user.name) {
+                    case "Twig":
+                      newRow.className = "twig";
+                      break;
+                    case "Lerion":
+                      newRow.className = "lerion";
+                      break;
+                    case "Radji":
+                    case "Atombombaren":
+                      newRow.className = "warrior";
+                      break;
+                    case "Wixo":
+                      newRow.className = "wixo";
+                      break;
+                    case "Knifey":
+                      newRow.className = "knifey";
+                      break;
+                  }
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(user.name));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(major.dkp));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(minor.dkp));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(major.activity));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(major.attendance));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(major.loot));
+                  newRow
+                    .insertCell()
+                    .appendChild(document.createTextNode(minor.loot));
+                  newRow
+                    .insertCell()
+                    .appendChild(
+                      document.createTextNode(
+                        `${moment({ hours: 0 }).diff(
+                          new Date(major.last_loot).toDateString(),
+                          "days"
+                        )} days`
+                      )
                     );
-                    return user.name
-                      .concat(" (" + userRequest.request_type + ")")
-                      .concat(dkp ? " dkp: " + dkp.dkp : "");
-                  })
-                  .join(", ");
-                var itemName = document.createTextNode(
-                  items.find(_item => _item.id === itemId).name
-                );
-
-                var div = document.createElement("div");
-                var h3 = document.createElement("h3");
-                var p = document.createElement("p");
-
-                p.appendChild(document.createTextNode(userRequests));
-                h3.appendChild(itemName);
-                div.appendChild(h3);
-                div.appendChild(p);
-                document.getElementById("requests").appendChild(div);
-              });
-
-            Object.keys(data.users)
-              .map(key => data.users[key])
-              .filter(user => user.rank !== "none")
-              .sort((a, b) => {
-                return (
-                  getMajorDkp(data, b.id).dkp - getMajorDkp(data, a.id).dkp
-                );
-              })
-              .forEach(user => {
-                const minor = getMinorDkp(data, user.id);
-                const major = getMajorDkp(data, user.id);
-
-                const newRow = document.getElementById("users").insertRow();
-
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(user.name));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(major.dkp));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(minor.dkp));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(major.activity));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(major.attendance));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(major.loot));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(minor.loot));
-                newRow
-                  .insertCell()
-                  .appendChild(
-                    document.createTextNode(
-                      new Date(major.last_loot).toDateString()
-                    )
-                  );
-                newRow
-                  .insertCell()
-                  .appendChild(
-                    document.createTextNode(
-                      new Date(minor.last_loot).toDateString()
-                    )
-                  );
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(major.kills_since_loot));
-                newRow
-                  .insertCell()
-                  .appendChild(document.createTextNode(minor.kills_since_loot));
-
-                document.getElementById(
-                  "dkp_weights"
-                ).innerHTML = JSON.stringify(data.dkp_weights, undefined, 2);
-              });
+                  newRow
+                    .insertCell()
+                    .appendChild(
+                      document.createTextNode(
+                        `${moment({ hours: 0 }).diff(
+                          new Date(minor.last_loot).toDateString(),
+                          "days"
+                        )} days`
+                      )
+                    );
+                  newRow
+                    .insertCell()
+                    .appendChild(
+                      document.createTextNode(major.kills_since_loot)
+                    );
+                  newRow
+                    .insertCell()
+                    .appendChild(
+                      document.createTextNode(minor.kills_since_loot)
+                    );
+                });
+            });
+            document.getElementById("dkp_weights").innerHTML = JSON.stringify(
+              data.dkp_weights,
+              undefined,
+              2
+            );
           });
       };
-
-      const getMinorDkp = (data, userId) => {
+      const getMinorDkp = (data, userId, mode = "40") => {
         return (
-          data.dkp.minor.find(m => m.user_id == userId) || {
+          data.dkp[mode].minor.find((m) => m.user_id == userId) || {
             activity: "",
-            attendance: ""
+            attendance: "",
           }
         );
       };
-
-      const getMajorDkp = (data, userId) => {
+      const getMajorDkp = (data, userId, mode = "40") => {
         return (
-          data.dkp.major.find(m => m.user_id == userId) || {
+          data.dkp[mode].major.find((m) => m.user_id == userId) || {
             activity: "",
-            attendance: ""
+            attendance: "",
           }
         );
       };
-
       const calculateDKP = (array, data) => {
-        array.forEach(function(item, key) {
+        array.forEach(function (item, key) {
           const ratioScore = Math.min(
             calculateRatioScore(item.attendance, item.loot) *
               data.dkp_weights.ratio_multiplier,
@@ -199,7 +280,6 @@
           ).toFixed(2);
         });
       };
-
       function calculateRatioScore(raids, loot) {
         if (loot === 0) {
           loot = 1;
@@ -207,7 +287,6 @@
         }
         return raids / loot;
       }
-
       fetchData();
     </script>
   </body>
